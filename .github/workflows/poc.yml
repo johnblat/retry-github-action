@@ -63,9 +63,11 @@ jobs:
 
   # Second Attempt
   setup-environment-2:
-    needs: teardown-environment-1
+    needs: 
+      - teardown-environment-1
+      - run-go-example-1
     runs-on: ubuntu-latest
-    if: needs.teardown-environment-1.result == 'failure'
+    if: needs.run-go-example-1.result == 'failure'
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
