@@ -39,7 +39,7 @@ jobs:
       - name: Run Go Example
         id: go-example
         run: |
-          ./go-example-bin -p 50
+          ./go-example-bin -p 0
         continue-on-error: true
 
       - name: Upload Failure Artifact
