@@ -24,11 +24,15 @@ jobs:
     needs: setup-environment
     runs-on: ubuntu-latest
     steps:
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 1.17
       - name: Checkout Repository
         uses: actions/checkout@v3
 
       - name: Build Go Example
-        run: go build -o go-example ./go-example/main.go
+        run: go build -o go-example-bin ./go-example/main.go
       
       - name: Check for Failure Artifact
         id: artifact-check
@@ -43,9 +47,9 @@ jobs:
         id: go-example
         run: |
           if [ "$artifact" = "true" ]; then
-            ./go-example -f go-example-fail.txt -p ${{ github.event.inputs.maxRetry }}
+            ./go-example-bin -f go-example-fail.txt -p 100
           else
-            ./go-example -p ${{ github.event.inputs.maxRetry }}
+            ./go-example-bin -p 0
           fi
         continue-on-error: true
 
@@ -65,8 +69,8 @@ jobs:
 
       - name: Teardown Environment
         run: |
-          chmod +x ./scripts/setup-env.sh
-          ./teardown-env.sh
+          chmod +x ./scripts/teardown-env.sh
+          ./scripts/teardown-env.sh
 
   retry-loop:
     needs: teardown-environment
