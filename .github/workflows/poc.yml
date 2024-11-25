@@ -6,62 +6,51 @@ on:
       maxRetry:
         description: "Maximum number of retries"
         required: false
-        default: "3"
+        default: "2"
 
 jobs:
-  setup-environment:
+  # First Attempt
+  setup-environment-1:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
-        
+
       - name: Setup Environment
         run: |
           chmod +x ./scripts/setup-env.sh
           ./scripts/setup-env.sh
 
-  run-go-example:
-    needs: setup-environment
+  run-go-example-1:
+    needs: setup-environment-1
     runs-on: ubuntu-latest
     steps:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
           go-version: 1.17
+
       - name: Checkout Repository
         uses: actions/checkout@v3
 
       - name: Build Go Example
         run: go build -o go-example-bin ./go-example/main.go
-      
-      - name: Check for Failure Artifact
-        id: artifact-check
-        run: |
-          if [ -f go-example-fail.txt ]; then
-            echo "artifact=true" >> $GITHUB_ENV
-          else
-            echo "artifact=false" >> $GITHUB_ENV
-          fi
 
       - name: Run Go Example
         id: go-example
         run: |
-          if [ "$artifact" = "true" ]; then
-            ./go-example-bin -f go-example-fail.txt -p 100
-          else
-            ./go-example-bin -p 0
-          fi
+          ./go-example-bin -p 50
         continue-on-error: true
 
       - name: Upload Failure Artifact
-        if: failure()
+        if: steps.go-example.outcome == 'failure'
         uses: actions/upload-artifact@v3
         with:
           name: go-example-fail
           path: go-example-fail.txt
 
-  teardown-environment:
-    needs: run-go-example
+  teardown-environment-1:
+    needs: run-go-example-1
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
@@ -72,17 +61,67 @@ jobs:
           chmod +x ./scripts/teardown-env.sh
           ./scripts/teardown-env.sh
 
-  retry-loop:
-    needs: teardown-environment
+  # Second Attempt
+  setup-environment-2:
+    needs: teardown-environment-1
+    runs-on: ubuntu-latest
+    if: needs.teardown-environment-1.result == 'failure'
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Setup Environment
+        run: |
+          chmod +x ./scripts/setup-env.sh
+          ./scripts/setup-env.sh
+
+  run-go-example-2:
+    needs: setup-environment-2
     runs-on: ubuntu-latest
     steps:
-      - name: Check Retry Counter
-        id: retry-check
-        run: |
-          echo "retry=$(( ${{ github.run_attempt }} - 1 ))" >> $GITHUB_ENV
-          if [ "${{ github.run_attempt }}" -gt ${{ github.event.inputs.maxRetry }} ]; then
-            exit 1
-          fi
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 1.17
 
-      - name: Trigger Retry
-        run: echo "Retrying the workflow..."
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Build Go Example
+        run: go build -o go-example-bin ./go-example/main.go
+
+      - name: Check for Previous Failure Artifact
+        id: artifact-check
+        uses: actions/download-artifact@v3
+        with:
+          name: go-example-fail
+        continue-on-error: true
+
+      - name: Run Go Example with Artifact
+        id: go-example
+        run: |
+          if [ -f go-example-fail.txt ]; then
+            ./go-example-bin -f go-example-fail.txt -p 50
+          else
+            ./go-example-bin -p 50
+          fi
+        continue-on-error: true
+
+      - name: Upload Failure Artifact
+        if: steps.go-example.outcome == 'failure'
+        uses: actions/upload-artifact@v3
+        with:
+          name: go-example-fail
+          path: go-example-fail.txt
+
+  teardown-environment-2:
+    needs: run-go-example-2
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Teardown Environment
+        run: |
+          chmod +x ./scripts/teardown-env.sh
+          ./scripts/teardown-env.sh

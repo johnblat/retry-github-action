@@ -76,6 +76,7 @@ func main() {
 			os.Exit(1)
 		}
 		defer file.Close()
+		file.Write([]byte("file contents: \n"))
 		// read in all file contents and print it out
 		buf := make([]byte, 1024)
 		for {
