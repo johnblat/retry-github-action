@@ -1,0 +1,84 @@
+name: Go Example POC Workflow
+
+on:
+  workflow_dispatch:
+    inputs:
+      maxRetry:
+        description: "Maximum number of retries"
+        required: false
+        default: "3"
+
+jobs:
+  setup-environment:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+        
+      - name: Setup Environment
+        run: |
+          chmod +x ./scripts/setup-env.sh
+          ./scripts/setup-env.sh
+
+  run-go-example:
+    needs: setup-environment
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Build Go Example
+        run: go build -o go-example ./go-example/main.go
+      
+      - name: Check for Failure Artifact
+        id: artifact-check
+        run: |
+          if [ -f go-example-fail.txt ]; then
+            echo "artifact=true" >> $GITHUB_ENV
+          else
+            echo "artifact=false" >> $GITHUB_ENV
+          fi
+
+      - name: Run Go Example
+        id: go-example
+        run: |
+          if [ "$artifact" = "true" ]; then
+            ./go-example -f go-example-fail.txt -p ${{ github.event.inputs.maxRetry }}
+          else
+            ./go-example -p ${{ github.event.inputs.maxRetry }}
+          fi
+        continue-on-error: true
+
+      - name: Upload Failure Artifact
+        if: failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: go-example-fail
+          path: go-example-fail.txt
+
+  teardown-environment:
+    needs: run-go-example
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Teardown Environment
+        run: |
+          chmod +x ./scripts/setup-env.sh
+          ./teardown-env.sh
+
+  retry-loop:
+    needs: teardown-environment
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check Retry Counter
+        id: retry-check
+        run: |
+          echo "retry=$(( ${{ github.run_attempt }} - 1 ))" >> $GITHUB_ENV
+          if [ "${{ github.run_attempt }}" -gt ${{ github.event.inputs.maxRetry }} ]; then
+            exit 1
+          fi
+
+      - name: Trigger Retry
+        run: echo "Retrying the workflow..."
