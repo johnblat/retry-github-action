@@ -54,6 +54,7 @@ jobs:
       - name: Set Failed Flag TRUE
         if: steps.go-example.outcome == 'failure'
         run: echo "failed=true" >> "$GITHUB_OUTPUT"
+
       - name: Set Failed Flag FALSE
         if: steps.go-example.outcome == 'success'
         run: echo "failed=false" >> "$GITHUB_OUTPUT"
@@ -77,7 +78,11 @@ jobs:
     needs: 
       - teardown-environment-1
       - run-go-example-1
+
     steps:
+      - name: Print outputs
+        run: echo "${{ needs.run-go-example-1.outputs.failed }}"
+        
       - name: Checkout Repository
         uses: actions/checkout@v3
 
