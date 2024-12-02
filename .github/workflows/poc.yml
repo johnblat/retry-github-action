@@ -25,7 +25,7 @@ jobs:
     needs: setup-environment-1
     runs-on: ubuntu-latest
     outputs:
-      failed: ${{ steps.go-example.outputs.failed }}
+      failed: ${{ steps.set-output.outputs.failed }}
     steps:
       - name: Setup Go
         uses: actions/setup-go@v5
@@ -51,13 +51,14 @@ jobs:
           name: go-example-fail
           path: go-example-fail.txt
           
-      - name: Set Failed Flag TRUE
-        if: steps.go-example.outcome == 'failure'
-        run: echo "failed=true" >> "$GITHUB_OUTPUT"
-
-      - name: Set Failed Flag FALSE
-        if: steps.go-example.outcome == 'success'
-        run: echo "failed=false" >> "$GITHUB_OUTPUT"
+      - name: Set Job-Level Output
+        id: set-output
+        run: |
+          if [ "${{ steps.go-example.outcome }}" == "failure" ]; then
+            echo "failed=true" >> $GITHUB_OUTPUT
+          else
+            echo "failed=false" >> $GITHUB_OUTPUT
+          f
 
   teardown-environment-1:
     needs: run-go-example-1
@@ -78,11 +79,11 @@ jobs:
     needs: 
       - teardown-environment-1
       - run-go-example-1
-
+    if: needs.run-go-example-1.outputs.failed == 'true'
     steps:
       - name: Print outputs
         run: echo "${{ needs.run-go-example-1.outputs.failed }}"
-        
+
       - name: Checkout Repository
         uses: actions/checkout@v3
 
