@@ -58,7 +58,7 @@ jobs:
             echo "failed=true" >> $GITHUB_OUTPUT
           else
             echo "failed=false" >> $GITHUB_OUTPUT
-          f
+          fi
 
   teardown-environment-1:
     needs: run-go-example-1
