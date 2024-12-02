@@ -82,9 +82,6 @@ jobs:
   #       continue-on-error: true
 
   setup-environment-2:
-    needs: 
-      - teardown-environment-1
-      - run-go-example-1
     runs-on: ubuntu-latest
     if: ${{ vars.failed == 'true' }}
     steps:
