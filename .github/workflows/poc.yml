@@ -7,8 +7,6 @@ on:
         description: "Maximum number of retries"
         required: false
         default: "2"
-env:
-  failed: 'false'
 
 jobs:
   # First Attempt
@@ -26,6 +24,8 @@ jobs:
   run-go-example-1:
     needs: setup-environment-1
     runs-on: ubuntu-latest
+    outputs:
+      failed: ${{ steps.go-example.outputs.failed }}
     steps:
       - name: Setup Go
         uses: actions/setup-go@v5
@@ -51,9 +51,12 @@ jobs:
           name: go-example-fail
           path: go-example-fail.txt
           
-      - name: Set Failed Flag
+      - name: Set Failed Flag TRUE
         if: steps.go-example.outcome == 'failure'
-        run: echo "failed='true'" >> $GITHUB_ENV
+        run: echo "failed=true" >> "$GITHUB_OUTPUT"
+      - name: Set Failed Flag FALSE
+        if: steps.go-example.outcome == 'success'
+        run: echo "failed=false" >> "$GITHUB_OUTPUT"
 
   teardown-environment-1:
     needs: run-go-example-1
@@ -67,25 +70,15 @@ jobs:
           chmod +x ./scripts/teardown-env.sh
           ./scripts/teardown-env.sh
 
-  # Second Attempt
-  # check-failure-artifact:
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - name: Checkout Repository
-  #       uses: actions/checkout@v3
-
-  #     - name: Check for Previous Failure Artifact
-  #       id: artifact-check
-  #       uses: actions/download-artifact@v4
-  #       with:
-  #         name: go-example-fail
-  #       continue-on-error: true
+  # Second Attempt        
 
   setup-environment-2:
     runs-on: ubuntu-latest
-    if: ${{ vars.failed == 'true' }}
+    needs: 
+      - teardown-environment-1
+      - run-go-example-1
+    if: needs.run-go-example-1.outputs.failed == 'true'
     steps:
-
       - name: Checkout Repository
         uses: actions/checkout@v3
 
