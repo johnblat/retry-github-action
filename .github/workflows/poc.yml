@@ -77,7 +77,6 @@ jobs:
     needs: 
       - teardown-environment-1
       - run-go-example-1
-    if: needs.run-go-example-1.outputs.failed == 'true'
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
