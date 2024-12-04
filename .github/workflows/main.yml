@@ -13,8 +13,22 @@ jobs:
   setup-1:
     uses: ./.github/workflows/setup.yml
 
-  run-1:
+  smoke-1:
     needs: setup-1
+    runs-on: ubuntu-latest
+    outputs:
+      result: ${{ steps.smoke-test.outcome }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+      - name: Run Smoke Tests
+        id: smoke-test
+        run: |
+          chmod +x ./scripts/smoke-test.sh
+          ./scripts/smoke-test.sh
+
+  run-1:
+    needs: smoke-1
     uses: ./.github/workflows/run-go-example.yml
     with:
       is_retry: false
@@ -31,16 +45,65 @@ jobs:
     if: needs.run-1.outputs.execution-result == 'failure'
     uses: ./.github/workflows/setup.yml
 
-  run-2:
+  smoke-2:
     needs: setup-2
-    if: needs.run-1.outputs.execution-result == 'failure'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+      - name: Run Smoke Tests
+        id: smoke-test
+        run: |
+          chmod +x ./scripts/smoke-test.sh
+          ./scripts/smoke-test.sh
+
+  run-2:
+    needs: smoke-2
     uses: ./.github/workflows/run-go-example.yml
     with:
       is_retry: true
-      fail_on_error: true  # This will fail the pipeline if the retry fails
-      success_percentage: 100
+      fail_on_error: true
+      success_percentage: 0
 
   teardown-2:
     needs: run-2
-    if: needs.run-1.outputs.execution-result == 'failure'
     uses: ./.github/workflows/teardown.yml
+
+  # Final Report
+  generate-report-1:
+    needs: [run-1, smoke-1]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Generate Report
+        run: |
+          echo "Execution Report" > report.txt
+          echo "================" >> report.txt
+          echo "" >> report.txt
+          
+          cat report.txt
+
+      - name: Upload Report
+        uses: actions/upload-artifact@v3
+        with:
+          name: execution-report
+          path: report.txt
+
+  generate-report-2:
+    needs: [run-2, smoke-2]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Generate Report
+        run: |
+          echo "Execution Report" > report.txt
+          echo "================" >> report.txt
+          echo "" >> report.txt
+          
+          cat report.txt
+
+      - name: Upload Report
+        uses: actions/upload-artifact@v3
+        with:
+          name: execution-report
+          path: report.txt
