@@ -77,8 +77,7 @@ jobs:
     steps:
       - name: Generate Report
         run: |
-          echo "Execution Report" > report.txt
-          echo "================" >> report.txt
+          echo "Execution Report 1" > report.txt
           echo "" >> report.txt
           
           cat report.txt
@@ -96,10 +95,7 @@ jobs:
     steps:
       - name: Generate Report
         run: |
-          echo "Execution Report" > report.txt
-          echo "================" >> report.txt
-          echo "" >> report.txt
-          
+          echo "Execution Report 2" > report.txt
           cat report.txt
 
       - name: Upload Report

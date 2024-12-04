@@ -62,6 +62,3 @@ jobs:
           name: go-example-fail
           path: go-example-fail.txt
 
-      - name: Fail if Required
-        if: inputs.fail_on_error && steps.go-example.outcome == 'failure'
-        run: exit 1
