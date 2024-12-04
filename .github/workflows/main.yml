@@ -38,7 +38,7 @@ jobs:
     with:
       is_retry: true
       fail_on_error: true  # This will fail the pipeline if the retry fails
-      success_percentage: 0
+      success_percentage: 100
 
   teardown-2:
     needs: run-2
