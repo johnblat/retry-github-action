@@ -1,0 +1,67 @@
+name: Run Go Example
+
+on:
+  workflow_call:
+    inputs:
+      is_retry:
+        required: true
+        type: boolean
+        description: "Whether this is a retry attempt"
+      fail_on_error:
+        required: true
+        type: boolean
+        description: "Whether to fail the job on error"
+      success_percentage:
+        required: false
+        type: number
+        description: "Percentage of chance of success"
+    outputs:
+      execution-result:
+        description: "Result of the go example execution"
+        value: ${{ jobs.run.outputs.result }}
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    outputs:
+      result: ${{ steps.go-example.outcome }}
+    steps:
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 1.17
+
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Build Go Example
+        run: go build -o go-example-bin ./go-example/main.go
+
+      - name: Check for Previous Failure Artifact
+        id: artifact-check
+        if: inputs.is_retry
+        uses: actions/download-artifact@v3
+        with:
+          name: go-example-fail
+        continue-on-error: true
+
+      - name: Run Go Example
+        id: go-example
+        run: |
+          if [ -f go-example-fail.txt ]; then
+            ./go-example-bin -f go-example-fail.txt -p ${{ inputs.success_percentage }}
+          else
+            ./go-example-bin -p ${{ inputs.success_percentage }}
+          fi
+        continue-on-error: ${{ !inputs.fail_on_error }}
+
+      - name: Upload Failure Artifact
+        if: steps.go-example.outcome == 'failure'
+        uses: actions/upload-artifact@v3
+        with:
+          name: go-example-fail
+          path: go-example-fail.txt
+
+      - name: Fail if Required
+        if: inputs.fail_on_error && steps.go-example.outcome == 'failure'
+        run: exit 1

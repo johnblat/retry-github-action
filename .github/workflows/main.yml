@@ -1,0 +1,46 @@
+name: Main Workflow
+
+on:
+  workflow_dispatch:
+    inputs:
+      maxRetry:
+        description: "Maximum number of retries"
+        required: false
+        default: "2"
+
+jobs:
+  # First Attempt
+  setup-1:
+    uses: ./.github/workflows/setup.yml
+
+  run-1:
+    needs: setup-1
+    uses: ./.github/workflows/run-go-example.yml
+    with:
+      is_retry: false
+      fail_on_error: false
+      success_percentage: 0
+
+  teardown-1:
+    needs: run-1
+    uses: ./.github/workflows/teardown.yml
+
+  # Second Attempt (Retry)
+  setup-2:
+    needs: [teardown-1, run-1]
+    if: needs.run-1.outputs.execution-result == 'failure'
+    uses: ./.github/workflows/setup.yml
+
+  run-2:
+    needs: setup-2
+    if: needs.run-1.outputs.execution-result == 'failure'
+    uses: ./.github/workflows/run-go-example.yml
+    with:
+      is_retry: true
+      fail_on_error: true  # This will fail the pipeline if the retry fails
+      success_percentage: 0
+
+  teardown-2:
+    needs: run-2
+    if: needs.run-1.outputs.execution-result == 'failure'
+    uses: ./.github/workflows/teardown.yml

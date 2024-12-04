@@ -1,0 +1,23 @@
+name: Setup Environment
+
+on:
+  workflow_call:
+    outputs:
+      setup-result:
+        description: "Result of the setup job"
+        value: ${{ jobs.setup.outputs.result }}
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      result: ${{ steps.setup.outcome }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Setup Environment
+        id: setup
+        run: |
+          chmod +x ./scripts/setup-env.sh
+          ./scripts/setup-env.sh

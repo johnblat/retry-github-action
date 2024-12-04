@@ -1,0 +1,23 @@
+name: Teardown Environment
+
+on:
+  workflow_call:
+    outputs:
+      teardown-result:
+        description: "Result of the teardown job"
+        value: ${{ jobs.teardown.outputs.result }}
+
+jobs:
+  teardown:
+    runs-on: ubuntu-latest
+    outputs:
+      result: ${{ steps.teardown.outcome }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Teardown Environment
+        id: teardown
+        run: |
+          chmod +x ./scripts/teardown-env.sh
+          ./scripts/teardown-env.sh
